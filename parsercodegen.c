@@ -378,6 +378,15 @@ void ERROR(int code)
     printf("Error: ");
     switch (code)
     {
+    case -1: // Error(tokenArr[i])
+        printf("name too long");
+        break;
+    case -2:
+        printf("number too long");
+        break;
+    case -3:
+        printf("invalid symbol");
+        break;
     case 1:
         printf("program must end with a period");
         break;
