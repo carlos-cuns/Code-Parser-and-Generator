@@ -807,6 +807,138 @@ void CONDITION()
             EXPRESSION();
             //emit GEQ;
         }
+        else
+        {
+            ERROR(13); //idk what error 
+        }
+    }
+}
+
+void EXPRESSION()
+{
+    if (TOKEN == 5) //minussym
+    {
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        TERM();
+        //emit NEG
+        while (TOKEN == 4 || TOKEN == 5)
+        {
+            if (TOKEN == 4) //plussym
+            {
+                INDEX++;
+                TOKEN = *(tokenArr + INDEX);
+                TERM();
+                //emit ADD
+            }
+            else
+            {
+                INDEX++;
+                TOKEN = *(tokenArr + INDEX);
+                TERM();
+                //emit SUB;
+            }
+        }
+    }
+    else
+    {
+        if (TOKEN == 4)
+        {
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
+        }
+        TERM();
+        while (TOKEN == 4 || TOKEN == 5)
+        {
+            if (TOKEN == 4) //plussym
+            {
+                INDEX++;
+                TOKEN = *(tokenArr + INDEX);
+                TERM();
+                //emit ADD
+            }
+            else
+            {
+                INDEX++;
+                TOKEN = *(tokenArr + INDEX);
+                TERM();
+                //emit SUB
+            }
+        }
+    }
+}
+
+void TERM()
+{
+    FACTOR();
+    while (TOKEN == 6 || TOKEN == 7 || TOKEN == MODSYM)
+    {
+        if (TOKEN == 6) //multsym
+        {
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
+            FACTOR();
+            //emit MUL
+        }
+        else if (TOKEN == 7) //slashsym
+        {
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
+            FACTOR();
+            //emit DIV
+        }
+        else
+        {
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
+            FACTOR();
+            //emit MOD
+        }
+    }
+}
+
+void FACTOR()
+{
+    int symIdx;
+    if (TOKEN == 2) //identsym
+    {
+        symIdx = SYMBOLTABLECHECK(*(lexemes + INDEX));
+        if (symIdx == -1)
+        {
+            ERROR(7);
+        }
+        if (symbolTable[symIdx].kind == 1)
+        {
+            //emit LIT (M = table[symIdx].Value)
+        }
+        else (var) //idk var ?
+        {
+            //emit LOD (M = symbolTable[symIdx].addr)
+        }
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+    }
+    else if (TOKEN == 3) //numbersym
+    {
+        //emit LIT
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+    }
+    else if (TOKEN == 15) //lparentsym
+    {
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        EXPRESSION();
+        if (TOKEN != 16) //rparentsym
+        {
+            ERROR(14);
+        }
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+    }
+    else
+    {
+        ERROR(15); //idk
     }
 }
 
