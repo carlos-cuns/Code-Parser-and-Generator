@@ -356,6 +356,7 @@ void printSource(char *filename)
     return;
 }
 
+// ================================================ HW 3 now =======================================
 #define MAX_SYMBOL_TABLE_SIZE 500
 typedef struct
 {
@@ -364,15 +365,16 @@ typedef struct
     int val;       // number (ASCII value)
     int level;     // L level
     int addr;      // M address
-    int mark       // to indicate unavailable or deleted
+    int mark;      // to indicate unavailable or deleted
 } symbol;
 
-symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
+symbol symbolTable[MAX_SYMBOL_TABLE_SIZE];
+int numSym = 0;
 char TOKEN;
 
 void ERROR(int code)
 {
-    printf("Error: <");
+    printf("Error: ");
     switch (code)
     {
     case 1:
@@ -421,14 +423,25 @@ void ERROR(int code)
         printf("arithmetic equations must contain operands, parentheses, numbers, or symbols");
         break;
     case 16:
-        printf("???");
+        printf("code too long");
         break;
     default:
         printf("error msg");
         break;
     }
-    printf(">\n");
+    printf("\n");
     exit(1);
+}
+
+void printSymTable()
+{
+    printf("Symbol Table:\n");
+    printf("%4s|%11s|%5s|%5s|%7s|%4s\n", "Kind", "Name", "Value", "Level", "Address", "Mark");
+    for (int i = 0; i < numSym; i++)
+    {
+        symbol s = symbolTable[i];
+        printf("%4d|%11s|%5d|%5d|%7d|%4d\n", s.kind, s.name, s.val, s.level, s.addr, s.mark);
+    }
 }
 
 int main(int argc, char **argv)
@@ -449,6 +462,7 @@ int main(int argc, char **argv)
     // printSource(filename);
     // printTable(tokenArr, lexems);
     // printTokens(tokenArr, lexems);
+    printSymTable();
 
     return 0;
 }
