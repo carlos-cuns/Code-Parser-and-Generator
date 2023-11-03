@@ -368,6 +368,7 @@ typedef struct
 symbol symbolTable[MAX_SYMBOL_TABLE_SIZE];
 int numSym = 0;
 int TOKEN;
+int index = 0;
 int numVars;
 
 FILE *out;
@@ -563,24 +564,51 @@ void BLOCK()
     // emit INC (M = 3 + numVars)
     STATEMENT();
 }
-void CONST_DECLARATION(char *tokenArr)
+void CONST_DECLARATION(char *tokenArr, char **lexems)
 {
-    int index = 0;
     if (TOKEN == 28) // const
     {
         do
         {
-            TOKEN = *(tokenArr + ++index);
+            index++;
+            TOKEN = *(tokenArr + index);
             if (TOKEN != 2) // identsym
             {
                 ERROR(7);
             }
-            if (SYMBOLTABLECHECK(TOKEN) != -1) // fix
+            if (SYMBOLTABLECHECK(*(lexems + index)) != -1) // fix
             {
                 ERROR(3);
             }
 
-        } while (TOKEN == 17);
+            int strLen = strlen(*(lexems + index));
+            char *savedName = malloc(sizeof(char) * (strLen + 1));
+            strcpy(savedName, *(lexems + index));
+            index++;
+            TOKEN = *(tokenArr + index);
+
+            if (TOKEN != 9) //eqlsym
+            {
+                ERROR(4);
+            }
+            index++;
+            TOKEN = *(tokenArr + index);
+            if (TOKEN != 3) //numsym
+            {
+                ERROR(5);
+            }
+            addSymbol(1, savedName, num, 0, 0, 0); // fix mark // fix num
+            index++;
+            TOKEN = *(tokenArr + index);
+        } while (TOKEN == 17); //commasym
+
+        if (TOKEN != 18)  //semicolonsym
+        {
+            ERROR(6);
+        }
+        
+        index++;
+        TOKEN = *(tokenArr + index);
     }
 }
 
@@ -593,7 +621,8 @@ int VAR_DECLARATION(char *tokenArr, char **lexems)
         do
         {
             numVars++;
-            TOKEN = *(tokenArr + ++index);
+            index++;
+            TOKEN = *(tokenArr + index);
             if (TOKEN != 2) // identsym
             {
                 ERROR(7);
@@ -604,16 +633,181 @@ int VAR_DECLARATION(char *tokenArr, char **lexems)
                 break;
             }
             addSymbol(2, *(lexems + index), 0, 0, numVars + 2, 0); // mark tbd
-            TOKEN = *(tokenArr + ++index);
+            index++;
+            TOKEN = *(tokenArr + index);
 
         } while (TOKEN == 17); // commasym
         if (TOKEN != 18)       // semicolonsym
         {
             ERROR(6);
         }
-        TOKEN = *(tokenArr + ++index);
+        index++;
+        TOKEN = *(tokenArr + index);
     }
     return numVars;
+}
+
+void STATEMENT(char *tokenArr, char **lexems)
+{
+    int symIndex;
+    if (TOKEN == 2)  //identsym
+    {
+        symIndex = SYMBOLTABLECHECK(*(tokenArr + index)); //fix maybe ?
+        if (symIndex == -1)
+        {
+            ERROR(7); //idk if its the right error
+        }
+        if (symbolTable[symIndex].kind != 2)
+        {
+            ERROR(8); //maybe
+        }
+        index++;
+        TOKEN = *(tokerArr + index);
+        EXPRESSION();
+        // emit STO (M = symbolTable[symIndex].addr)
+        return;
+    }
+    if (TOKEN == 21) //beginsym
+    {
+        do
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            STATEMENT();
+        } while (TOKEN == 18);  //semicolon
+
+        if (TOKEN != 22)
+        {
+            ERROR(10);
+        }
+        index++;
+        TOKEN = *(tokenArr + index);
+        return;
+    }
+    if (TOKEN == 23) // ifsym
+    {
+        index++;
+        TOKEN = *(tokenArr + index);
+        CONDITION();
+        int jpcIdx = index; // ixk
+        //emit JPC
+        if (TOKEN != 24) // thensym
+        {
+            ERROR(11);
+        }
+        index++;
+        TOKEN = *(tokenArr + index);
+        STATEMENT();
+        // code[jpcldx].M = current code index ????
+        return;
+    }
+    if (TOKEN == 25)
+    {
+        index++;
+        TOKEN = *(tokenArr + index);
+        int loopIdx = index;
+        CONDITION();
+        if (TOKEN != 26)
+        {
+            ERROR(12); 
+        }
+        index++;
+        TOKEN = *(tokenArr + index);
+        jpcIdx = index; //idk 
+        //emit JPC
+        STATEMENT();
+        //emit JMP (M = loopIdx)
+        // code[jpcIdx].M = current code index
+        return;
+    }
+    if (TOKEN == 32) // readsym
+    {
+        index++;
+        TOKEN = *(tokenArr + index);
+        if (TOKEN != 2) // identsym
+        {
+            ERROR(7);
+        }
+        symIndex = SYMBOLTABLECHECK(*(lexems + index));
+        if (symIndex == -1)
+        {
+            ERROR(3);
+        }
+        if (symbolTable[symIndex].kind != 2)
+        {
+            ERROR(8);  //maybe
+        }
+        index++;
+        TOKEN = *(tokenArr + index);
+        //emit READ
+        //emit STO (M = symbolTable[symIndex].addr)
+        return;
+    }
+    if (TOKEN == 31) //writesym
+    {
+        index++;
+        TOKEN = *(tokenArr + index);
+        EXPRESSION;
+        //emit WRTIE
+        return;
+    }
+}
+
+void CONDITION()
+{
+    if (TOKEN == 1) // ooddsym
+    {
+        index++;
+        TOKEN = *(tokenArr + index);
+        EXPRESSION();
+        //emit ODD
+    }
+    else
+    {
+        EXPRESSION();
+        if (TOKEN == 9) //Eqlsym
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            EXPRESSION();
+            //emit EQL;
+        }
+        else if (TOKEN == 10)  //neqsym
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            EXPRESSION();
+            //emit NEQ
+        }
+        else if (TOKEN == 11) // lessym
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            EXPRESSION();
+            //emit LSS
+        }
+        else if (TOKEN == 12) //leqsym
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            EXPRESSION();
+            //emit LEQ
+        }
+        else if (TOKEN == 13) //gtrsym
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            EXPRESSION();
+            //emit GTR
+        }
+        else if (TOKEN == 14) // geqsym
+        {
+            index++;
+            TOKEN = *(tokenArr + index);
+            EXPRESSION();
+            //emit GEQ;
+        }
+    }
 }
 
 int main(int argc, char **argv)
