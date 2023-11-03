@@ -367,11 +367,17 @@ typedef struct
 
 symbol symbolTable[MAX_SYMBOL_TABLE_SIZE];
 int numSym = 0;
-char TOKEN;
+int TOKEN;
 int numVars;
 
 FILE *out;
 int line = 0;
+
+void PROGRAM();
+void BLOCK();
+void CONST_DECLARATION();
+int VAR_DECLARATION();
+void STATEMENT();
 
 void ERROR(int code)
 {
@@ -495,6 +501,18 @@ void emit(int sym, int l, int m)
     line++;
 }
 
+void addSymbol(int kind, char *name, int val, int level, int addr, int mark)
+{
+    symbol s;
+    s.kind = kind;
+    strcpy(s.name, name);
+    s.val = val;
+    s.level = level;
+    s.addr = addr;
+    s.mark = mark;
+    symbolTable[numSym++] = s;
+}
+
 void printAssembly()
 {
     char buffer;
@@ -518,6 +536,86 @@ void printAssembly()
     return;
 }
 
+int SYMBOLTABLECHECK(char *name)
+{
+    for (int i = 0; i < numSym; i++)
+    {
+        if (strcmp(symbolTable[i].name, name) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+void PROGRAM()
+{
+    BLOCK();
+    if (TOKEN != 19) // periodsym
+    {
+        ERROR(1);
+    }
+    // emit HALT
+}
+void BLOCK()
+{
+    CONST_DECLARATION();
+    numVars = VAR_DECLARATION();
+    // emit INC (M = 3 + numVars)
+    STATEMENT();
+}
+void CONST_DECLARATION(char *tokenArr)
+{
+    int index = 0;
+    if (TOKEN == 28) // const
+    {
+        do
+        {
+            TOKEN = *(tokenArr + ++index);
+            if (TOKEN != 2) // identsym
+            {
+                ERROR(7);
+            }
+            if (SYMBOLTABLECHECK(TOKEN) != -1) // fix
+            {
+                ERROR(3);
+            }
+
+        } while (TOKEN == 17);
+    }
+}
+
+int VAR_DECLARATION(char *tokenArr, char **lexems)
+{
+    int index = 0;
+    numVars = 0;
+    if (TOKEN == 29) // varsym
+    {
+        do
+        {
+            numVars++;
+            TOKEN = *(tokenArr + ++index);
+            if (TOKEN != 2) // identsym
+            {
+                ERROR(7);
+            }
+            if (SYMBOLTABLECHECK(*(lexems + index)) != -1)
+            {
+                ERROR(3);
+                break;
+            }
+            addSymbol(2, *(lexems + index), 0, 0, numVars + 2, 0); // mark tbd
+            TOKEN = *(tokenArr + ++index);
+
+        } while (TOKEN == 17); // commasym
+        if (TOKEN != 18)       // semicolonsym
+        {
+            ERROR(6);
+        }
+        TOKEN = *(tokenArr + ++index);
+    }
+    return numVars;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2)
@@ -538,23 +636,6 @@ int main(int argc, char **argv)
     // printTokens(tokenArr, lexems);
 
     out = fopen("assembly.txt", "w");
-    symbol s1, s2;
-    s1.kind = 2;
-    strcpy(s1.name, "x");
-    s1.val = 0;
-    s1.level = 0;
-    s1.addr = 3;
-    s1.mark = 1;
-    symbolTable[0] = s1;
-    s2.kind = 2;
-    strcpy(s2.name, "y");
-    s2.val = 0;
-    s2.level = 0;
-    s2.addr = 4;
-    s2.mark = 1;
-    symbolTable[1] = s2;
-    numSym = 2;
-
     emit(1, 2, 3);
     fclose(out);
     printAssembly();
