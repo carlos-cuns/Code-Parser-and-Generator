@@ -7,11 +7,12 @@
 #define MAX_SIZE 100
 #define PROG_SIZE 1000
 #define MAX_LEX 100
+#define NOT_USED NULL
 
 char *reserved[] = {
-    NULL, "skip", NULL, NULL, "+", "-", "*", "/", "ifel", "=", "!=", "<", "<=", ">", ">=", "(",
-    ")", ",", ";", ".", ":=", "begin", "end", "if", "then", "while", "do", "call", "const",
-    "var", "procedure", "write", "read", "else"};
+    NULL, "odd", NULL, NULL, "+", "-", "*", "/", NOT_USED, "=", "!=", "<", "<=", ">", ">=", "(",
+    ")", ",", ";", ".", ":=", "begin", "end", "if", "then", "while", "do", NOT_USED, "const",
+    "var", NOT_USED, "write", "read", NOT_USED};
 
 int progLen = 0;
 
@@ -353,6 +354,81 @@ void printSource(char *filename)
     fclose(file);
 
     return;
+}
+
+#define MAX_SYMBOL_TABLE_SIZE 500
+typedef struct
+{
+    int kind;      // const = 1, var = 2, proc = 3
+    char name[10]; // name up to 11 chars
+    int val;       // number (ASCII value)
+    int level;     // L level
+    int addr;      // M address
+    int mark       // to indicate unavailable or deleted
+} symbol;
+
+symbol symbol_table[MAX_SYMBOL_TABLE_SIZE];
+char TOKEN;
+
+void ERROR(int code)
+{
+    printf("Error: <");
+    switch (code)
+    {
+    case 1:
+        printf("program must end with a period");
+        break;
+    case 2:
+        printf("const, var, and read keywords must be followed by an identifier");
+        break;
+    case 3:
+        printf("symbol name has already been declared");
+        break;
+    case 4:
+        printf("constants must be assigned with =");
+        break;
+    case 5:
+        printf("constants must be assigned an integer value");
+        break;
+    case 6:
+        printf("constant and variable declarations must be followed by a semicolon");
+        break;
+    case 7:
+        printf("undeclared identifier");
+        break;
+    case 8:
+        printf("only variable values may be altered");
+        break;
+    case 9:
+        printf("assignment statements must use :=");
+        break;
+    case 10:
+        printf("begin must be followed by end");
+        break;
+    case 11:
+        printf("if must be followed by then");
+        break;
+    case 12:
+        printf("while must be followed by do");
+        break;
+    case 13:
+        printf("condition must contain comparison operator");
+        break;
+    case 14:
+        printf("right parenthesis must follow left parenthesis");
+        break;
+    case 15:
+        printf("arithmetic equations must contain operands, parentheses, numbers, or symbols");
+        break;
+    case 16:
+        printf("???");
+        break;
+    default:
+        printf("error msg");
+        break;
+    }
+    printf(">\n");
+    exit(1);
 }
 
 int main(int argc, char **argv)
