@@ -518,40 +518,6 @@ void printAssembly()
     return;
 }
 
-// int SYMBOLTABLECHECK(char *name)
-// {
-//     for (int i = 0; i < MAX_SYMBOL_TABLE_SIZE; i++)
-//     {
-//         if (strcmp(symbolTable[i].name, name) == 0)
-//         {
-//             return i;
-//         }
-//     }
-//     return -1;
-// }
-
-// void PROGRAM()
-// {
-//     BLOCK();
-//     if (TOKEN != reserved[19])
-//     {
-//         // err0r
-//     }
-//     // emit HALT
-// }
-
-// void BLOCK()
-// {
-//     CONST - DECLARATION();
-//     numVars = VAR - DECLARATION();
-//     // emit INC (M = 3 + numVars)
-//     STATEMENT();
-// }
-
-// int VAR - DECLARATION()
-// {
-// }
-
 int main(int argc, char **argv)
 {
     if (argc < 2)
