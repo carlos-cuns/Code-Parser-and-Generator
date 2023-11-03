@@ -172,12 +172,9 @@ void readELF(char *filename, char **lexems)
         }
         else if (isdigit(buffer))
         {
-            if (!number)
+            if (j == 0)
             {
                 number = 1;
-                if (j > 0)
-                    insertLex(lexems, workingStr, j + 1, i++);
-                j = 0;
             }
             workingStr[j] = buffer;
             j++;
@@ -373,11 +370,23 @@ int numSym = 0;
 char TOKEN;
 int numVars;
 
+FILE *out;
+int line = 0;
+
 void ERROR(int code)
 {
     printf("Error: ");
     switch (code)
     {
+    case -1: // Error(tokenArr[i])
+        printf("name too long");
+        break;
+    case -2:
+        printf("number too long");
+        break;
+    case -3:
+        printf("invalid symbol");
+        break;
     case 1:
         printf("program must end with a period");
         break;
@@ -436,110 +445,77 @@ void ERROR(int code)
 
 void printSymTable()
 {
-    printf("Symbol Table:\n");
-    printf("%4s|%11s|%5s|%5s|%7s|%4s\n", "Kind", "Name", "Value", "Level", "Address", "Mark");
+    printf("Symbol Table:\n\n");
+    printf("%6s|%13s|%7s|%7s|%9s|%6s\n", "Kind ", "Name ", "Value ", "Level ", "Address ", "Mark ");
+    printf("-----------------------------------------------------\n");
     for (int i = 0; i < numSym; i++)
     {
         symbol s = symbolTable[i];
-        printf("%4d|%11s|%5d|%5d|%7d|%4d\n", s.kind, s.name, s.val, s.level, s.addr, s.mark);
+        printf("%5d |%12s |%6d |%6d |%8d |%5d\n", s.kind, s.name, s.val, s.level, s.addr, s.mark);
     }
 }
 
-int SYMBOLTABLECHECK(char *name)
+void emit(int sym, int l, int m)
 {
-    for (int i = 0; i < numSym; i++)
+    char *op;
+    switch (sym)
     {
-        if (strcmp(symbolTable[i].name, name) == 0)
-        {
-            return i;
-        }
+    case 1:
+        op = "LIT";
+        break;
+    case 2:
+        // figure out which operation is being done
+        op = "OPR";
+        break;
+    case 3:
+        op = "LOD";
+        break;
+    case 4:
+        op = "STO";
+        break;
+    case 5:
+        op = "CAL";
+        break;
+    case 6:
+        op = "INC";
+        break;
+    case 7:
+        op = "JMP";
+        break;
+    case 8:
+        op = "JPC";
+        break;
+    case 9:
+        op = "SYS";
+        break;
+    default:
+        break;
     }
-    return -1;
+    fprintf(out, "%4d %5s %3d %3d", line, op, l, m);
+    line++;
 }
 
-void PROGRAM()
+void printAssembly()
 {
-    BLOCK();
-    if (TOKEN != reserved[19]) //periodsym
+    char buffer;
+    FILE *file = fopen("assembly.txt", "r");
+
+    if (!file)
     {
-        ERROR(1);
+        printf("failed to open assembly file");
+        exit(1);
     }
-    // emit HALT
-}
-
-void BLOCK()
-{
-    CONST_DECLARATION();
-    numVars = VAR_DECLARATION();
-    // emit INC (M = 3 + numVars)
-    STATEMENT();
-}
-
-void CONST_DECLARATION()
-{
-    int index = 0;
-    if (TOKEN == reserved[28]) // const
+    printf("Assembly code:\n\n");
+    printf("%4s %5s %3s %3s\n", "Line", "OP", "L", "M");
+    while (fscanf(file, "%c", &buffer) != EOF)
     {
-        do
-        {
-            TOKEN = *(tokenArr + ++index);
-            if (TOKEN != NULL)  //identsym
-            {
-                ERROR(7);
-            }
-            if (SYMBOLTABLECHECK(TOKEN) != -1)  //fix
-            {
-                ERROR(3);
-            }
-
-        } while (token == reserved[17])
+        printf("%c", buffer);
     }
-}
+    printf("\n\n");
 
-int VAR_DECLARATION()
-{
-    int index = 0;
-    numVars = 0;
-    if (TOKEN == reserved[29]) //varsym
-    {
-        do
-        {
-            numVars++;
-            TOKEN = *(tokenArr + ++index);
-            if (TOKEN != NULL) //identsym
-            {
-                ERROR(7);
-            }
-            if (SYMBOLTABLECHECK(*(lexems + index)) != -1)
-            {
-                ERROR(3);
-                break;
-            }
-            addSymbol(2, *(lexems + index), 0, 0, numVars + 2, 0); //mark tbd
-            TOKEN = *(tokenArr + ++index);
+    fclose(file);
 
-        } while (TOKEN == reserved[17]) //commasym
-        if (TOKEN != reserved[18]) //semicolonsym
-        {
-            ERROR(6);
-        }
-        TOKEN = *(tokenArr + ++index);
-    }
-    return numVars;
-}
-
-
-
-void addSymbol(int kind, char *name, int val, int level, int addr, int mark)
-{
-    symbolTable[numSym] = malloc(sizeof(symbol));
-    symbolTable[numSym].kind = kind;
-    strcpy(symbolTable[numSym], name);
-    symbolTable[numSym].val = val;
-    symbolTable[numSym].level = level;
-    symbolTable[numSym].addr = addr;
-    symbolTable[numSym].mark = mark;
-    numSym++;
+    return;
 }
 
 int main(int argc, char **argv)
@@ -560,7 +536,28 @@ int main(int argc, char **argv)
     // printSource(filename);
     // printTable(tokenArr, lexems);
     // printTokens(tokenArr, lexems);
-    printSymTable();
 
+    out = fopen("assembly.txt", "w");
+    symbol s1, s2;
+    s1.kind = 2;
+    strcpy(s1.name, "x");
+    s1.val = 0;
+    s1.level = 0;
+    s1.addr = 3;
+    s1.mark = 1;
+    symbolTable[0] = s1;
+    s2.kind = 2;
+    strcpy(s2.name, "y");
+    s2.val = 0;
+    s2.level = 0;
+    s2.addr = 4;
+    s2.mark = 1;
+    symbolTable[1] = s2;
+    numSym = 2;
+
+    emit(1, 2, 3);
+    fclose(out);
+    printAssembly();
+    printSymTable();
     return 0;
 }
