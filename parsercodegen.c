@@ -447,7 +447,7 @@ void printSymTable()
 
 int SYMBOLTABLECHECK(char *name)
 {
-    for (int i = 0; i < MAX_SYMBOL_TABLE_SIZE; i++)
+    for (int i = 0; i < numSym; i++)
     {
         if (strcmp(symbolTable[i].name, name) == 0)
         {
@@ -460,23 +460,86 @@ int SYMBOLTABLECHECK(char *name)
 void PROGRAM()
 {
     BLOCK();
-    if (TOKEN != reserved[19])
+    if (TOKEN != reserved[19]) //periodsym
     {
-        // err0r
+        ERROR(1);
     }
     // emit HALT
 }
 
 void BLOCK()
 {
-    CONST - DECLARATION();
-    numVars = VAR - DECLARATION();
+    CONST_DECLARATION();
+    numVars = VAR_DECLARATION();
     // emit INC (M = 3 + numVars)
     STATEMENT();
 }
 
-int VAR - DECLARATION()
+void CONST_DECLARATION()
 {
+    int index = 0;
+    if (TOKEN == reserved[28]) // const
+    {
+        do
+        {
+            TOKEN = *(tokenArr + ++index);
+            if (TOKEN != NULL)  //identsym
+            {
+                ERROR(7);
+            }
+            if (SYMBOLTABLECHECK(TOKEN) != -1)  //fix
+            {
+                ERROR(3);
+            }
+
+        } while (token == reserved[17])
+    }
+}
+
+int VAR_DECLARATION()
+{
+    int index = 0;
+    numVars = 0;
+    if (TOKEN == reserved[29]) //varsym
+    {
+        do
+        {
+            numVars++;
+            TOKEN = *(tokenArr + ++index);
+            if (TOKEN != NULL) //identsym
+            {
+                ERROR(7);
+            }
+            if (SYMBOLTABLECHECK(*(lexems + index)) != -1)
+            {
+                ERROR(3);
+                break;
+            }
+            addSymbol(2, *(lexems + index), 0, 0, numVars + 2, 0); //mark tbd
+            TOKEN = *(tokenArr + ++index);
+
+        } while (TOKEN == reserved[17]) //commasym
+        if (TOKEN != reserved[18]) //semicolonsym
+        {
+            ERROR(6);
+        }
+        TOKEN = *(tokenArr + ++index);
+    }
+    return numVars;
+}
+
+
+
+void addSymbol(int kind, char *name, int val, int level, int addr, int mark)
+{
+    symbolTable[numSym] = malloc(sizeof(symbol));
+    symbolTable[numSym].kind = kind;
+    strcpy(symbolTable[numSym], name);
+    symbolTable[numSym].val = val;
+    symbolTable[numSym].level = level;
+    symbolTable[numSym].addr = addr;
+    symbolTable[numSym].mark = mark;
+    numSym++;
 }
 
 int main(int argc, char **argv)
