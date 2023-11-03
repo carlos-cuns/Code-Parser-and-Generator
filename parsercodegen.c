@@ -108,15 +108,15 @@ int *createTokenArr(char **lexems)
     return tokenArr;
 }
 
-void insertLex(char **lexems, char *workingStr, int length, int index)
+void insertLex(char **lexems, char *workingStr, int length, int idx)
 {
     if (workingStr == NULL || length < 2)
         return;
     workingStr[length - 1] = '\0';
     if (strcmp(workingStr, "") == 0)
         return;
-    lexems[index] = malloc(sizeof(char) * (length));
-    strcpy(lexems[index], workingStr);
+    lexems[idx] = malloc(sizeof(char) * (length));
+    strcpy(lexems[idx], workingStr);
 
     return;
 }
@@ -365,10 +365,13 @@ typedef struct
     int mark;      // to indicate unavailable or deleted
 } symbol;
 
+int *tokenArr;
+char **lexems;
+
 symbol symbolTable[MAX_SYMBOL_TABLE_SIZE];
 int numSym = 0;
 int TOKEN;
-int index = 0;
+int INDEX = 0;
 int numVars;
 
 FILE *out;
@@ -379,6 +382,8 @@ void BLOCK();
 void CONST_DECLARATION();
 int VAR_DECLARATION();
 void STATEMENT();
+void EXPRESSION();
+void CONDITION();
 
 void ERROR(int code)
 {
@@ -555,200 +560,200 @@ void PROGRAM()
     {
         ERROR(1);
     }
-    // emit HALT
+    emit(9, 0, 3);
 }
 void BLOCK()
 {
     CONST_DECLARATION();
     numVars = VAR_DECLARATION();
-    // emit INC (M = 3 + numVars)
+    emit(6, 0, 3 + numVars);
     STATEMENT();
 }
-void CONST_DECLARATION(char *tokenArr, char **lexems)
+void CONST_DECLARATION()
 {
     if (TOKEN == 28) // const
     {
         do
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             if (TOKEN != 2) // identsym
             {
                 ERROR(7);
             }
-            if (SYMBOLTABLECHECK(*(lexems + index)) != -1) // fix
+            if (SYMBOLTABLECHECK(*(lexems + INDEX)) != -1) // fix
             {
                 ERROR(3);
             }
 
-            int strLen = strlen(*(lexems + index));
+            int strLen = strlen(*(lexems + INDEX));
             char *savedName = malloc(sizeof(char) * (strLen + 1));
-            strcpy(savedName, *(lexems + index));
-            index++;
-            TOKEN = *(tokenArr + index);
+            strcpy(savedName, *(lexems + INDEX));
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
 
-            if (TOKEN != 9) //eqlsym
+            if (TOKEN != 9) // eqlsym
             {
                 ERROR(4);
             }
-            index++;
-            TOKEN = *(tokenArr + index);
-            if (TOKEN != 3) //numsym
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
+            if (TOKEN != 3) // numsym
             {
                 ERROR(5);
             }
-            addSymbol(1, savedName, num, 0, 0, 0); // fix mark // fix num
-            index++;
-            TOKEN = *(tokenArr + index);
-        } while (TOKEN == 17); //commasym
+            addSymbol(1, savedName, atoi(lexems[INDEX]), 0, 0, 0); // fix mark
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
+        } while (TOKEN == 17); // commasym
 
-        if (TOKEN != 18)  //semicolonsym
+        if (TOKEN != 18) // semicolonsym
         {
             ERROR(6);
         }
-        
-        index++;
-        TOKEN = *(tokenArr + index);
+
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
     }
 }
 
-int VAR_DECLARATION(char *tokenArr, char **lexems)
+int VAR_DECLARATION()
 {
-    int index = 0;
     numVars = 0;
     if (TOKEN == 29) // varsym
     {
         do
         {
             numVars++;
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             if (TOKEN != 2) // identsym
             {
                 ERROR(7);
             }
-            if (SYMBOLTABLECHECK(*(lexems + index)) != -1)
+            if (SYMBOLTABLECHECK(*(lexems + INDEX)) != -1)
             {
                 ERROR(3);
                 break;
             }
-            addSymbol(2, *(lexems + index), 0, 0, numVars + 2, 0); // mark tbd
-            index++;
-            TOKEN = *(tokenArr + index);
+            addSymbol(2, *(lexems + INDEX), 0, 0, numVars + 2, 0); // mark tbd
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
 
         } while (TOKEN == 17); // commasym
         if (TOKEN != 18)       // semicolonsym
         {
             ERROR(6);
         }
-        index++;
-        TOKEN = *(tokenArr + index);
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
     }
     return numVars;
 }
 
-void STATEMENT(char *tokenArr, char **lexems)
+void STATEMENT()
 {
     int symIndex;
-    if (TOKEN == 2)  //identsym
+    int jpcIdx;
+    if (TOKEN == 2) // identsym
     {
-        symIndex = SYMBOLTABLECHECK(*(tokenArr + index)); //fix maybe ?
+        symIndex = SYMBOLTABLECHECK(*(lexems + INDEX)); // fix maybe ?
         if (symIndex == -1)
         {
-            ERROR(7); //idk if its the right error
+            ERROR(7); // idk if its the right error
         }
         if (symbolTable[symIndex].kind != 2)
         {
-            ERROR(8); //maybe
+            ERROR(8); // maybe
         }
-        index++;
-        TOKEN = *(tokerArr + index);
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
         EXPRESSION();
-        // emit STO (M = symbolTable[symIndex].addr)
+        emit(4, 0, symbolTable[symIndex].addr);
         return;
     }
-    if (TOKEN == 21) //beginsym
+    if (TOKEN == 21) // beginsym
     {
         do
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             STATEMENT();
-        } while (TOKEN == 18);  //semicolon
+        } while (TOKEN == 18); // semicolon
 
         if (TOKEN != 22)
         {
             ERROR(10);
         }
-        index++;
-        TOKEN = *(tokenArr + index);
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
         return;
     }
     if (TOKEN == 23) // ifsym
     {
-        index++;
-        TOKEN = *(tokenArr + index);
-        CONDITION();
-        int jpcIdx = index; // ixk
-        //emit JPC
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        CONDITION(tokenArr);
+        jpcIdx = INDEX; // ixk
+        emit(8, 0, jpcIdx);
         if (TOKEN != 24) // thensym
         {
             ERROR(11);
         }
-        index++;
-        TOKEN = *(tokenArr + index);
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
         STATEMENT();
         // code[jpcldx].M = current code index ????
         return;
     }
     if (TOKEN == 25)
     {
-        index++;
-        TOKEN = *(tokenArr + index);
-        int loopIdx = index;
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        int loopIdx = INDEX;
         CONDITION();
         if (TOKEN != 26)
         {
-            ERROR(12); 
+            ERROR(12);
         }
-        index++;
-        TOKEN = *(tokenArr + index);
-        jpcIdx = index; //idk 
-        //emit JPC
-        STATEMENT();
-        //emit JMP (M = loopIdx)
-        // code[jpcIdx].M = current code index
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        jpcIdx = INDEX; // idk
+        emit(8, 0, jpcIdx);
+        STATEMENT(tokenArr, lexems);
+        emit(7, 0, loopIdx);
+        //  code[jpcIdx].M = current code index
         return;
     }
     if (TOKEN == 32) // readsym
     {
-        index++;
-        TOKEN = *(tokenArr + index);
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
         if (TOKEN != 2) // identsym
         {
             ERROR(7);
         }
-        symIndex = SYMBOLTABLECHECK(*(lexems + index));
+        symIndex = SYMBOLTABLECHECK(*(lexems + INDEX));
         if (symIndex == -1)
         {
             ERROR(3);
         }
         if (symbolTable[symIndex].kind != 2)
         {
-            ERROR(8);  //maybe
+            ERROR(8); // maybe
         }
-        index++;
-        TOKEN = *(tokenArr + index);
-        //emit READ
-        //emit STO (M = symbolTable[symIndex].addr)
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        emit(9, 0, 2);
+        emit(4, 0, symbolTable[symIndex].addr);
         return;
     }
-    if (TOKEN == 31) //writesym
+    if (TOKEN == 31) // writesym
     {
-        index++;
-        TOKEN = *(tokenArr + index);
-        EXPRESSION;
-        //emit WRTIE
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
+        EXPRESSION();
+        emit(9, 0, 1);
         return;
     }
 }
@@ -757,55 +762,55 @@ void CONDITION()
 {
     if (TOKEN == 1) // ooddsym
     {
-        index++;
-        TOKEN = *(tokenArr + index);
+        INDEX++;
+        TOKEN = *(tokenArr + INDEX);
         EXPRESSION();
-        //emit ODD
+        emit(2, 0, 11);
     }
     else
     {
         EXPRESSION();
-        if (TOKEN == 9) //Eqlsym
+        if (TOKEN == 9) // Eqlsym
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             EXPRESSION();
-            //emit EQL;
+            emit(2, 0, 5);
         }
-        else if (TOKEN == 10)  //neqsym
+        else if (TOKEN == 10) // neqsym
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             EXPRESSION();
-            //emit NEQ
+            emit(2, 0, 6);
         }
         else if (TOKEN == 11) // lessym
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             EXPRESSION();
-            //emit LSS
+            emit(2, 0, 7);
         }
-        else if (TOKEN == 12) //leqsym
+        else if (TOKEN == 12) // leqsym
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             EXPRESSION();
-            //emit LEQ
+            emit(2, 0, 8);
         }
-        else if (TOKEN == 13) //gtrsym
+        else if (TOKEN == 13) // gtrsym
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             EXPRESSION();
-            //emit GTR
+            emit(2, 0, 9);
         }
         else if (TOKEN == 14) // geqsym
         {
-            index++;
-            TOKEN = *(tokenArr + index);
+            INDEX++;
+            TOKEN = *(tokenArr + INDEX);
             EXPRESSION();
-            //emit GEQ;
+            emit(2, 0, 10);
         }
     }
 }
@@ -819,18 +824,18 @@ int main(int argc, char **argv)
     }
 
     char filename[MAX_SIZE];
-    char **lexems = malloc(sizeof(char *) * PROG_SIZE);
+    lexems = malloc(sizeof(char *) * PROG_SIZE);
 
     strcpy(filename, argv[1]);
     readELF(filename, lexems);
-    int *tokenArr = createTokenArr(lexems);
+    tokenArr = createTokenArr(lexems);
 
     // printSource(filename);
     // printTable(tokenArr, lexems);
     // printTokens(tokenArr, lexems);
 
     out = fopen("assembly.txt", "w");
-    emit(1, 2, 3);
+    PROGRAM();
     fclose(out);
     printAssembly();
     printSymTable();
