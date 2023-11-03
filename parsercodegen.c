@@ -371,6 +371,7 @@ typedef struct
 symbol symbolTable[MAX_SYMBOL_TABLE_SIZE];
 int numSym = 0;
 char TOKEN;
+int numVars;
 
 void ERROR(int code)
 {
@@ -442,6 +443,40 @@ void printSymTable()
         symbol s = symbolTable[i];
         printf("%4d|%11s|%5d|%5d|%7d|%4d\n", s.kind, s.name, s.val, s.level, s.addr, s.mark);
     }
+}
+
+int SYMBOLTABLECHECK(char *name)
+{
+    for (int i = 0; i < MAX_SYMBOL_TABLE_SIZE; i++)
+    {
+        if (strcmp(symbolTable[i].name, name) == 0)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void PROGRAM()
+{
+    BLOCK();
+    if (TOKEN != reserved[19])
+    {
+        // err0r
+    }
+    // emit HALT
+}
+
+void BLOCK()
+{
+    CONST - DECLARATION();
+    numVars = VAR - DECLARATION();
+    // emit INC (M = 3 + numVars)
+    STATEMENT();
+}
+
+int VAR - DECLARATION()
+{
 }
 
 int main(int argc, char **argv)
