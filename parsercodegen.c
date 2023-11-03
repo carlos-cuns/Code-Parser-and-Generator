@@ -172,12 +172,9 @@ void readELF(char *filename, char **lexems)
         }
         else if (isdigit(buffer))
         {
-            if (!number)
+            if (j == 0)
             {
                 number = 1;
-                if (j > 0)
-                    insertLex(lexems, workingStr, j + 1, i++);
-                j = 0;
             }
             workingStr[j] = buffer;
             j++;
@@ -373,6 +370,9 @@ int numSym = 0;
 char TOKEN;
 int numVars;
 
+FILE *out;
+int line = 0;
+
 void ERROR(int code)
 {
     printf("Error: ");
@@ -436,48 +436,112 @@ void ERROR(int code)
 
 void printSymTable()
 {
-    printf("Symbol Table:\n");
-    printf("%4s|%11s|%5s|%5s|%7s|%4s\n", "Kind", "Name", "Value", "Level", "Address", "Mark");
+    printf("Symbol Table:\n\n");
+    printf("%6s|%13s|%7s|%7s|%9s|%6s\n", "Kind ", "Name ", "Value ", "Level ", "Address ", "Mark ");
+    printf("-----------------------------------------------------\n");
     for (int i = 0; i < numSym; i++)
     {
         symbol s = symbolTable[i];
-        printf("%4d|%11s|%5d|%5d|%7d|%4d\n", s.kind, s.name, s.val, s.level, s.addr, s.mark);
+        printf("%5d |%12s |%6d |%6d |%8d |%5d\n", s.kind, s.name, s.val, s.level, s.addr, s.mark);
     }
 }
 
-int SYMBOLTABLECHECK(char *name)
+void emit(int sym, int l, int m)
 {
-    for (int i = 0; i < MAX_SYMBOL_TABLE_SIZE; i++)
+    char *op;
+    switch (sym)
     {
-        if (strcmp(symbolTable[i].name, name) == 0)
-        {
-            return i;
-        }
+    case 1:
+        op = "LIT";
+        break;
+    case 2:
+        // figure out which operation is being done
+        op = "OPR";
+        break;
+    case 3:
+        op = "LOD";
+        break;
+    case 4:
+        op = "STO";
+        break;
+    case 5:
+        op = "CAL";
+        break;
+    case 6:
+        op = "INC";
+        break;
+    case 7:
+        op = "JMP";
+        break;
+    case 8:
+        op = "JPC";
+        break;
+    case 9:
+        op = "SYS";
+        break;
+    default:
+        break;
     }
-    return -1;
+    fprintf(out, "%4d %5s %3d %3d", line, op, l, m);
+    line++;
 }
 
-void PROGRAM()
+void printAssembly()
 {
-    BLOCK();
-    if (TOKEN != reserved[19])
+    char buffer;
+    FILE *file = fopen("assembly.txt", "r");
+
+    if (!file)
     {
-        // err0r
+        printf("failed to open assembly file");
+        exit(1);
     }
-    // emit HALT
+    printf("Assembly code:\n\n");
+    printf("%4s %5s %3s %3s\n", "Line", "OP", "L", "M");
+    while (fscanf(file, "%c", &buffer) != EOF)
+    {
+        printf("%c", buffer);
+    }
+    printf("\n\n");
+
+    fclose(file);
+
+    return;
 }
 
-void BLOCK()
-{
-    CONST - DECLARATION();
-    numVars = VAR - DECLARATION();
-    // emit INC (M = 3 + numVars)
-    STATEMENT();
-}
+// int SYMBOLTABLECHECK(char *name)
+// {
+//     for (int i = 0; i < MAX_SYMBOL_TABLE_SIZE; i++)
+//     {
+//         if (strcmp(symbolTable[i].name, name) == 0)
+//         {
+//             return i;
+//         }
+//     }
+//     return -1;
+// }
 
-int VAR - DECLARATION()
-{
-}
+// void PROGRAM()
+// {
+//     BLOCK();
+//     if (TOKEN != reserved[19])
+//     {
+//         // err0r
+//     }
+//     // emit HALT
+// }
+
+// void BLOCK()
+// {
+//     CONST - DECLARATION();
+//     numVars = VAR - DECLARATION();
+//     // emit INC (M = 3 + numVars)
+//     STATEMENT();
+// }
+
+// int VAR - DECLARATION()
+// {
+// }
 
 int main(int argc, char **argv)
 {
@@ -497,7 +561,28 @@ int main(int argc, char **argv)
     // printSource(filename);
     // printTable(tokenArr, lexems);
     // printTokens(tokenArr, lexems);
-    printSymTable();
 
+    out = fopen("assembly.txt", "w");
+    symbol s1, s2;
+    s1.kind = 2;
+    strcpy(s1.name, "x");
+    s1.val = 0;
+    s1.level = 0;
+    s1.addr = 3;
+    s1.mark = 1;
+    symbolTable[0] = s1;
+    s2.kind = 2;
+    strcpy(s2.name, "y");
+    s2.val = 0;
+    s2.level = 0;
+    s2.addr = 4;
+    s2.mark = 1;
+    symbolTable[1] = s2;
+    numSym = 2;
+
+    emit(1, 2, 3);
+    fclose(out);
+    printAssembly();
+    printSymTable();
     return 0;
 }
